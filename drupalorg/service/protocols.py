@@ -28,11 +28,13 @@ class HTTPError(ConchError):
 class DrushProcessProtocol(ProcessProtocol):
     implements(IServiceProtocol)
 
+    DRUSH = "drush"
+
     """Read string values from Drush"""
 
     def __init__(self, config, command):
         assert isinstance(config, ConfigParser)
-        assert isinstance(url, str)
+        assert isinstance(command, str)
 
         self.raw = str()
         self.raw_error = str()
@@ -55,7 +57,9 @@ class DrushProcessProtocol(ProcessProtocol):
             log.err("Errors reported from drush:")
             for each in self.raw_error.split("\n"):
                 log.err("  " + each)
+
         rc = status.value.exitCode
+
         if self.result and rc == 0:
             self.deferred.callback(self.result)
         else:
@@ -63,15 +67,17 @@ class DrushProcessProtocol(ProcessProtocol):
                 err = DrushError("Failed to read from drush.")
             else:
                 err = DrushError("Drush failed ({0})".format(rc))
+
             self.deferred.errback(err)
 
     def request(self, *args):
-        exec_args = [drush_path,
-                     "--root={0}".format(self.config.get("drush", "webRoot")),
+        exec_args = [self.DRUSH,
+                     "--root={0}".format(self.config.get("DEFAULT", "webRoot")),
                      self.command]
         for a in args:
             exec_args += a.values()
-        reactor.spawnProcess(self, drush_path, exec_args, env={"TERM":"dumb"})
+
+        reactor.spawnProcess(self, self.DRUSH, exec_args, env={"TERM":"dumb"})
         return self.deferred
 
 class HTTPServiceProtocol(object):
