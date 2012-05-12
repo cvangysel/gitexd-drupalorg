@@ -91,7 +91,7 @@ class DrupalAuth(object):
         return service.deferred
 
     def authorizeRepository(self, session, repository, requestType):
-        assert isinstance(session, Session)
+        assert ISession.providedBy(session)
         assert requestType in (PULL, PUSH)
 
         return session.mayAccess(repository, requestType)

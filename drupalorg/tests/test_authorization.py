@@ -54,6 +54,36 @@ class PushctlTests(AuthenticationTests):
 
         return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
+class AnonymousAuthorizationTests(AuthenticationTests):
+
+    pluginPackages = {
+        IAuth: authorization
+    }
+
+    def testAnonymousPull(self):
+        self._setUp(allowAnon=True)
+
+        remoteRepository = self._testHTTP()
+
+        def processEnded(result):
+            # Not equal because local repository has more commits than remote
+            # there should have been no errors though
+            self.assertNoError()
+            self.assertNotEqual(self.repository, remoteRepository)
+
+        return self.pullRepository(self.repository).addCallback(processEnded)
+
+    def testAnonymousPush(self):
+        self._setUp(allowAnon=True)
+
+        remoteRepository = self._testHTTP()
+
+        def processEnded(result):
+            self.assertError("You don't have access to this repository.")
+            self.assertNotEqual(self.repository, remoteRepository)
+
+        return self.pushRepository(self.repository).addCallback(processEnded)
+
 class AuthorizationTests(AuthenticationTests):
 
     pluginPackages = {
