@@ -10,15 +10,15 @@ from gitexd.interfaces import IAuth
 """
 
 class DrupalTestAuth(auth.DrupalTestAuth):
-    implements(IPlugin, IAuth)
+  implements(IPlugin, IAuth)
 
-    def authorizeRepository(self, user, repository, readOnly):
-        """
-                    Whether or not the user may access the repository
+  def authorizeRepository(self, user, repository, readOnly):
+    """
+          Whether or not the user may access the repository
 
-                    This should always return True in the case of Authentication tests.
-              """
+          This should always return True in the case of Authentication tests.
+    """
 
-        return True
+    return True
 
 auth = DrupalTestAuth()

@@ -5,175 +5,174 @@ from gitexd.interfaces import IAuth
 __author__ = 'christophe'
 
 class PushctlTests(AuthenticationTests):
+  pluginPackages = {
+    IAuth: authorization
+  }
 
-    pluginPackages = {
-        IAuth: authorization
-    }
+  def testPushEnabled(self):
+    self._setUp()
 
-    def testPushEnabled(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "passAuth")
 
-        remoteRepository = self._testSSH("test", "passAuth")
+    def processEnded(result):
+      self.assertNoError()
+      self.assertEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertNoError()
-            self.assertEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testPushDisabled(self):
+    self._setUp()
 
-    def testPushDisabled(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "passAuth-allPushesDisabled")
 
-        remoteRepository = self._testSSH("test", "passAuth-allPushesDisabled")
+    def processEnded(result):
+      self.assertError("Pushes to projects are currently disabled.")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("Pushes to projects are currently disabled.")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testSandboxPushDisabled(self):
+    self._setUp()
 
-    def testSandboxPushDisabled(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "passAuth-allSandboxPushesDisabled")
 
-        remoteRepository = self._testSSH("test", "passAuth-allSandboxPushesDisabled")
+    def processEnded(result):
+      self.assertError("Pushes to sandboxes are currently disabled.")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("Pushes to sandboxes are currently disabled.")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testSandboxPushEnabledCorePushDisabled(self):
+    self._setUp()
 
-    def testSandboxPushEnabledCorePushDisabled(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "passAuth-sandboxPushEnabledCorePushDisabled")
 
-        remoteRepository = self._testSSH("test", "passAuth-sandboxPushEnabledCorePushDisabled")
+    def processEnded(result):
+      self.assertNoError()
+      self.assertEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertNoError()
-            self.assertEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
 class AnonymousAuthorizationTests(AuthenticationTests):
+  pluginPackages = {
+    IAuth: authorization
+  }
 
-    pluginPackages = {
-        IAuth: authorization
-    }
+  def testAnonymousPull(self):
+    self._setUp(allowAnon=True)
 
-    def testAnonymousPull(self):
-        self._setUp(allowAnon=True)
+    remoteRepository = self._testHTTP()
 
-        remoteRepository = self._testHTTP()
+    def processEnded(result):
+      # Not equal because local repository has more commits than remote
+      # there should have been no errors though
+      self.assertNoError()
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            # Not equal because local repository has more commits than remote
-            # there should have been no errors though
-            self.assertNoError()
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pullRepository(self.repository).addCallback(processEnded)
 
-        return self.pullRepository(self.repository).addCallback(processEnded)
+  def testAnonymousPush(self):
+    self._setUp(allowAnon=True)
 
-    def testAnonymousPush(self):
-        self._setUp(allowAnon=True)
+    remoteRepository = self._testHTTP()
 
-        remoteRepository = self._testHTTP()
+    def processEnded(result):
+      self.assertError("You don't have access to this repository.")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("You don't have access to this repository.")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository).addCallback(processEnded)
 
-        return self.pushRepository(self.repository).addCallback(processEnded)
 
 class AuthorizationTests(AuthenticationTests):
+  pluginPackages = {
+    IAuth: authorization
+  }
 
-    pluginPackages = {
-        IAuth: authorization
-    }
+  def testPasswordUserAuthorized(self):
+    self._setUp()
 
-    def testPasswordUserAuthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "passAuth")
 
-        remoteRepository = self._testSSH("test", "passAuth")
+    def processEnded(result):
+      self.assertNoError()
+      self.assertEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertNoError()
-            self.assertEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testPasswordUserUnauthorized(self):
+    self._setUp()
 
-    def testPasswordUserUnauthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("john", "passAuth")
 
-        remoteRepository = self._testSSH("john", "passAuth")
+    def processEnded(result):
+      self.assertError("User 'john' does not have write permissions for repository versioncontrol")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("User 'john' does not have write permissions for repository versioncontrol")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testDefaultUserAuthorized(self):
+    self._setUp()
 
-    def testDefaultUserAuthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("git", "keyAuth")
 
-        remoteRepository = self._testSSH("git", "keyAuth")
+    def processEnded(result):
+      self.assertNoError()
+      self.assertEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertNoError()
-            self.assertEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
+  def testDefaultUserUnauthorized(self):
+    self._setUp()
 
-    def testDefaultUserUnauthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("git", "keyAuth_invalid")
 
-        remoteRepository = self._testSSH("git", "keyAuth_invalid")
+    def processEnded(result):
+      self.assertError("User 'None' does not have write permissions for repository versioncontrol")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("User 'None' does not have write permissions for repository versioncontrol")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
+  def testKeyUserAuthorized(self):
+    self._setUp()
 
-    def testKeyUserAuthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "keyAuth")
 
-        remoteRepository = self._testSSH("test", "keyAuth")
+    def processEnded(result):
+      self.assertNoError()
+      self.assertEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertNoError()
-            self.assertEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
+  def testKeyUserUnauthorized(self):
+    self._setUp()
 
-    def testKeyUserUnauthorized(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "keyAuth_invalid")
 
-        remoteRepository = self._testSSH("test", "keyAuth_invalid")
+    def processEnded(result):
+      self.assertError("User 'test' does not have write permissions for repository versioncontrol")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("User 'test' does not have write permissions for repository versioncontrol")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, keyFile="test").addCallback(processEnded)
+  def testDisabledProject(self):
+    self._setUp()
 
-    def testDisabledProject(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "disabledProject")
 
-        remoteRepository = self._testSSH("test", "disabledProject")
+    def processEnded(result):
+      self.assertError("Project versioncontrol has been disabled")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("Project versioncontrol has been disabled")
-            self.assertNotEqual(self.repository, remoteRepository)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)
 
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+  def testDisabledUser(self):
+    self._setUp()
 
-    def testDisabledUser(self):
-        self._setUp()
+    remoteRepository = self._testSSH("test", "disabledUsers")
 
-        remoteRepository = self._testSSH("test", "disabledUsers")
+    def processEnded(result):
+      self.assertError("You do not have permission to access 'versioncontrol' with the provided credentials.")
+      self.assertNotEqual(self.repository, remoteRepository)
 
-        def processEnded(result):
-            self.assertError("You do not have permission to access 'versioncontrol' with the provided credentials.")
-            self.assertNotEqual(self.repository, remoteRepository)
-
-        return self.pushRepository(self.repository, "pass").addCallback(processEnded)
+    return self.pushRepository(self.repository, "pass").addCallback(processEnded)

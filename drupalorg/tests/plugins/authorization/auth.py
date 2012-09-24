@@ -10,9 +10,9 @@ from gitexd.interfaces import IAuth
 """
 
 class DrupalTestAuth(DrupalAuth):
-    implements(IPlugin, IAuth)
+  implements(IPlugin, IAuth)
 
-    def __init__(self):
-        self.protocol = DummyServiceProtocol
+  def __init__(self):
+    self.protocol = DummyServiceProtocol
 
 auth = DrupalTestAuth()

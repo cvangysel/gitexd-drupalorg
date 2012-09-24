@@ -12,94 +12,94 @@ import hashlib
 from gitexd.protocol import PUSH, PULL
 
 class DrupalAuth(object):
-    implements(IPlugin, IAuth)
+  implements(IPlugin, IAuth)
 
-    SessionInterface = ISession
+  SessionInterface = ISession
 
-    def __init__(self):
-        self.protocol = HTTPServiceProtocol
+  def __init__(self):
+    self.protocol = HTTPServiceProtocol
 
-    def _handleProtocolCallback(self, result, app, data):
-        assert isinstance(app, Factory)
-        assert isinstance(data, dict)
+  def _handleProtocolCallback(self, result, app, data):
+    assert isinstance(app, Factory)
+    assert isinstance(data, dict)
 
-        if result:
-            authService = Service(self.protocol(app.getConfig(), 'vcs-auth-data'))
-            pushctlService = Service(self.protocol(app.getConfig(), 'pushctl-state'))
+    if result:
+      authService = Service(self.protocol(app.getConfig(), 'vcs-auth-data'))
+      pushctlService = Service(self.protocol(app.getConfig(), 'pushctl-state'))
 
-            return Session(app, authService, pushctlService, data)
-        else:
-            return None
+      return Session(app, authService, pushctlService, data)
+    else:
+      return None
 
-    def allowAnonymousAccess(self, app):
-        assert isinstance(app, Factory)
+  def allowAnonymousAccess(self, app):
+    assert isinstance(app, Factory)
 
-        if app.getConfig().get("DEFAULT", "allowAnonymous", True):
-            service = Service(self.protocol(app.getConfig(), 'vcs-auth-data'))
+    if app.getConfig().get("DEFAULT", "allowAnonymous", True):
+      service = Service(self.protocol(app.getConfig(), 'vcs-auth-data'))
 
-            return defer.succeed(AnonymousSession(app, service))
-        else:
-            return defer.succeed(None)
+      return defer.succeed(AnonymousSession(app, service))
+    else:
+      return defer.succeed(None)
 
-    def authenticateKey(self, app, credentials):
-        assert isinstance(app, Factory)
-        assert ISSHPrivateKey.providedBy(credentials)
+  def authenticateKey(self, app, credentials):
+    assert isinstance(app, Factory)
+    assert ISSHPrivateKey.providedBy(credentials)
 
-        key = Key.fromString(credentials.blob)
-        fingerprint = key.fingerprint().replace(':', '')
+    key = Key.fromString(credentials.blob)
+    fingerprint = key.fingerprint().replace(':', '')
 
-        service = None
-        data = {}
+    service = None
+    data = {}
 
-        if credentials.username == "git":
-            service = Service(self.protocol(app.getConfig(), 'drupalorg-sshkey-check'))
+    if credentials.username == "git":
+      service = Service(self.protocol(app.getConfig(), 'drupalorg-sshkey-check'))
 
-            data = {
-                "fingerprint": fingerprint
-            }
+      data = {
+        "fingerprint": fingerprint
+      }
 
-            service.request_bool(data)
-        else:
-            service = Service(self.protocol(app.getConfig(), 'drupalorg-ssh-user-key'))
+      service.request_bool(data)
+    else:
+      service = Service(self.protocol(app.getConfig(), 'drupalorg-ssh-user-key'))
 
-            data = {
-                "username": credentials.username,
-                "fingerprint": fingerprint
-            }
+      data = {
+        "username": credentials.username,
+        "fingerprint": fingerprint
+      }
 
-            service.request_bool(data)
+      service.request_bool(data)
 
-        service.addCallback(self._handleProtocolCallback, app, data)
+    service.addCallback(self._handleProtocolCallback, app, data)
 
-        return service.deferred
+    return service.deferred
 
-    def authenticatePassword(self, app, credentials):
-        assert isinstance(app, Factory)
-        assert IUsernamePassword.providedBy(credentials)
+  def authenticatePassword(self, app, credentials):
+    assert isinstance(app, Factory)
+    assert IUsernamePassword.providedBy(credentials)
 
-        service = Service(self.protocol(app.getConfig(), 'drupalorg-vcs-auth-check-user-pass'))
+    service = Service(self.protocol(app.getConfig(), 'drupalorg-vcs-auth-check-user-pass'))
 
-        data = {
-            "username": credentials.username,
-            "password": hashlib.md5(credentials.password).hexdigest()
-        }
+    data = {
+      "username": credentials.username,
+      "password": hashlib.md5(credentials.password).hexdigest()
+    }
 
-        service.request_bool(data)
+    service.request_bool(data)
 
-        service.addCallback(self._handleProtocolCallback, app, data)
+    service.addCallback(self._handleProtocolCallback, app, data)
 
-        return service.deferred
+    return service.deferred
 
-    def authorizeRepository(self, session, repository, requestType):
-        assert ISession.providedBy(session)
-        assert requestType in (PULL, PUSH)
+  def authorizeRepository(self, session, repository, requestType):
+    assert ISession.providedBy(session)
+    assert requestType in (PULL, PUSH)
 
-        return session.mayAccess(repository, requestType)
+    return session.mayAccess(repository, requestType)
 
-    def authorizeReferences(self, session, refs, requestType):
-        return True
+  def authorizeReferences(self, session, refs, requestType):
+    return True
 
-    def _invariant(self):
-        assert IServiceProtocol.implementedBy(self._protocol)
+  def _invariant(self):
+    assert IServiceProtocol.implementedBy(self._protocol)
 
 auth = DrupalAuth()
