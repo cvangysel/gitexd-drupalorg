@@ -3,12 +3,12 @@ from twisted.cred.credentials import ISSHPrivateKey, IUsernamePassword
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 from zope.interface.declarations import implements
+from drupalorg.drupalpass import DrupalHash
 from drupalorg import ISession, AnonymousSession, Session
 from drupalorg.service import IServiceProtocol, Service
 from drupalorg.service.protocols import HTTPServiceProtocol
 from gitexd import Factory
 from gitexd.interfaces import IAuth
-import hashlib
 from gitexd.protocol import PUSH, PULL
 
 class DrupalAuth(object):
@@ -77,16 +77,27 @@ class DrupalAuth(object):
     assert isinstance(app, Factory)
     assert IUsernamePassword.providedBy(credentials)
 
-    service = Service(self.protocol(app.getConfig(), 'drupalorg-vcs-auth-check-user-pass'))
+    service = Service(self.protocol(app.getConfig(), 'drupalorg-vcs-auth-fetch-user-hash'))
+    service.request_json({"username": credentials.username})
 
-    data = {
-      "username": credentials.username,
-      "password": hashlib.md5(credentials.password).hexdigest()
-    }
+    def _authCallback(result):
+      if result:
+        service = Service(self.protocol(app.getConfig(), 'drupalorg-vcs-auth-check-user-pass'))
 
-    service.request_bool(data)
+        data = {
+          "username": credentials.username,
+          "password": DrupalHash(result, credentials.password).get_hash()
+        }
 
-    service.addCallback(self._handleProtocolCallback, app, data)
+        service.request_bool(data)
+
+        service.addCallback(self._handleProtocolCallback, app, data)
+
+        return service.deferred
+      else:
+        return None
+
+    service.addCallback(_authCallback)
 
     return service.deferred
 
