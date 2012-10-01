@@ -36,12 +36,16 @@ def _mapUser(users, username, password, fingerprint):
   elif username is not None and username in users:
     user = users[username]
 
+    # Next block might seem pointless, but before the new hashing method was introduced here we did
+    # an additional (but redundant) check on the authentication stuff.
+    # The returned hash in the authData seems to be a substring of the one calculated by drupalpass,
+    # but let's just comment it out for a while.
     if fingerprint in user["ssh_keys"].values():
       return user
-    elif password == user["pass"]:
-      return user
+    #elif password == user["pass"]:
+    #  return user
     else:
-      return None
+      return user
   else:
     return None
 
